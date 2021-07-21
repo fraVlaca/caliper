@@ -260,6 +260,7 @@ class MonitorDocker extends MonitorInterface {
                         this.stats[id].blockIO_wx.push(diskW);
                     }
                 }
+                console.log(sum(...this.stats[id].netIO_rx));
                 this.isReading = false;
             } catch (error) {
                 Logger.error(`Error reading monitor statistics: ${error}`);
@@ -274,7 +275,7 @@ class MonitorDocker extends MonitorInterface {
      */
     async start() {
         // Conditionally build monitored containers, these are persisted between rounds and restart action
-        if (!this.containers) {
+        if (!this.containers || this.containers.length === 0) {
             await this.findContainers();
         }
         // Read stats immediately, then kick off monitor refresh at interval
