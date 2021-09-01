@@ -118,6 +118,45 @@ class ConnectionProfileDefinition {
         return this.TLSEnabled;
     }
 
+    /**
+     * Return all the peers for this organization
+     * @returns {[string]} an array containing the list of all the peers
+     */
+    getPeers(){
+        peers = this.connectionProfile.peers
+        const peersInChannel = [];
+        for (const peer of Object.keys(peers)) {
+            peersInChannel.push(peer);
+        }
+    }
+
+    /**
+     * Return the tls certificate for the specified peer
+     * @param {*} peer the name of the channel
+     * @returns {string} tls certificate
+     */
+    getTlsCertForPeer(peer){
+        return this.connectionProfile.peers[peer].tlsCACerts.pem
+    }
+
+    /**
+     * Return the end point oport of thye peer
+     * @param {*} peer the name of the channel
+     * @returns {string} end point port for peer
+     */
+    getEndPointForPeer(peer){
+        return this.connectionProfile.peers[peer].url
+    }
+
+    /**
+     * Return the gRpc options for the specified peer
+     * @param {*} peer the name of the channel
+     * @returns {[*]} the list of grpc object properties
+     */
+    getGrpcOptionForPeer(peer){
+        return this.connectionProfile.peers[peer].grpcOption
+    }
+
 
     /**
      * Get all the peers defined in the specified channel

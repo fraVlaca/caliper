@@ -14,7 +14,11 @@
 
 'use strict';
 
-const { DefaultEventHandlerStrategies, DefaultQueryHandlerStrategies, Gateway } = require('fabric-network');
+//const { DefaultEventHandlerStrategies, DefaultQueryHandlerStrategies, Gateway } = require('fabric-network');
+import { promises as fs } from 'fs';
+import * as grpc from '@grpc/grpc-js';
+import { connect, Identity, signers } from 'fabric-gateway';
+import { ClientRequest } from 'http';
 const { ConnectorBase, CaliperUtils, TxStatus, Version, ConfigUtil } = require('@hyperledger/caliper-core');
 const FabricConnectorContext = require('../../FabricConnectorContext');
 
@@ -85,6 +89,7 @@ class V2FabricGateway extends ConnectorBase {
         this.contractInstancesByIdentity = new Map();
         this.gatewayInstanceByIdentity = new Map();
         this.peerNameToPeerObjectCache = new Map();
+        this.clients = new Map();
         this.context = undefined;
 
         // Timeouts
@@ -179,7 +184,12 @@ class V2FabricGateway extends ConnectorBase {
         for (const userName of this.gatewayInstanceByIdentity.keys()) {
             const gateway = this.gatewayInstanceByIdentity.get(userName);
             logger.info(`disconnecting gateway for user ${userName}`);
-            gateway.disconnect();
+            gateway.close();
+        }
+        for (const clientName of this.clients.keys()) {
+            const client = this.clients.get(clientName);
+            logger.info(`disconnecting gRpc client at peer ${clientName}`);
+            client.close();
         }
 
         this.peerNameToPeerObjectCache.clear();
@@ -199,11 +209,12 @@ class V2FabricGateway extends ConnectorBase {
         logger.debug('Entering _prepareGatewayAndContractMapsForEachIdentity');
 
         for (const organization of this.connectorConfiguration.getOrganizations()) {
+            const peers = connectorConfiguration.getConnectionProfileDefinitionForOrganization(organization);
             const aliasNames = await this.connectorConfiguration.getAliasNamesForOrganization(organization);
             const walletWithIdentities = this.connectorConfiguration.getWallet();
 
-            for (const aliasName of aliasNames) {
-                const gateway = await this._createGatewayWithIdentity(organization, aliasName, walletWithIdentities);
+            for (let i=0;i < aliasNames.length; i++) {
+                const gateway = await this._createGatewayWithIdentity(organization, aliasNames[i], walletWithIdentities,peer[i%peers.length-1]);
                 this.gatewayInstanceByIdentity.set(aliasName, gateway);
 
                 const contractMap = await this._createChannelAndChaincodeIdToContractMap(gateway, aliasName);
@@ -256,41 +267,33 @@ class V2FabricGateway extends ConnectorBase {
      * @returns {Promise<Gateway>} a gateway object for the passed user identity
      * @async
      */
-    async _createGatewayWithIdentity(mspId, aliasName, wallet) {
+    async _createGatewayWithIdentity(mspId, aliasName, wallet, peer) {
         logger.debug(`Entering _createGatewayWithIdentity for alias name ${aliasName}`);
+        
+        //create identity from mspId and certificate
+        const credentials = wallet.credentials.certificate;
+        const identity = { mspId, credentials };
 
-        const connectionProfileDefinition = await this.connectorConfiguration.getConnectionProfileDefinitionForOrganization(mspId);
-        const opts = {
-            identity: aliasName,
-            wallet,
-            discovery: {
-                asLocalhost: this.configLocalHost,
-                enabled: connectionProfileDefinition.isDynamicConnectionProfile()
-            },
-            eventHandlerOptions: {
-                commitTimeout: this.configDefaultTimeout,
-                strategy: EventStrategies[this.configEventStrategy]
-            },
-            queryHandlerOptions: {
-                timeout: this.configDefaultTimeout,
-                strategy: QueryStrategies[this.configQueryStrategy]
-            }
-        };
-
-        if (this.connectorConfiguration.isMutualTLS()) {
-            opts.clientTlsIdentity = aliasName;
+        //create gRpc client to designated port with the tlsCredentials of the peer
+        //use one already created if a client for each peer is already created
+        let client;
+        if(this.clients.keys().has(peer)){
+            client = this.clients.get(peer)
+        } else{
+            const connectionProfileDefinition = await this.connectorConfiguration.getConnectionProfileDefinitionForOrganization(mspId);
+            const tlsRootCert = await connectionProfileDefinition.getTlsCertForPeer(peer);
+            const tlsCredentials = grpc.credentials.createSsl(tlsRootCert);
+            const peerEndpoint = connectionProfileDefinition.getEndPointForPeer(peer);
+            const grpcOptions = connectionProfileDefinition.getGrpcOptionForPeer(peer);
+            const GrpcClient = grpc.makeGenericClientConstructor({}, '');
+            client = new GrpcClient(peerEndpoint, tlsCredentials, grpcOptions);
+            this.clients.set(peer, client)
         }
+        //create signer using the private key of the peer
+        const privateKey = wallet.credentials.privateKey;
+        const signer = signers.newPrivateKeySigner(privateKey);
 
-        const gateway = new Gateway();
-
-        try {
-            logger.info(`Connecting user with identity ${aliasName} to a Network Gateway`);
-            await gateway.connect(connectionProfileDefinition.getConnectionProfile(), opts);
-            logger.info(`Successfully connected user with identity ${aliasName} to a Network Gateway`);
-        } catch (err) {
-            logger.error(`Connecting user with identity ${aliasName} to a Network Gateway failed with error: ${err}`);
-            throw err;
-        }
+        const gateway = connect(client, identity, signer);
 
         logger.debug('Exiting _createGatewayWithIdentity');
 
@@ -333,17 +336,20 @@ class V2FabricGateway extends ConnectorBase {
         // - TxID is not available until after transaction submit/evaluate and must be set at that point
         const invokeStatus = new TxStatus();
 
+        //set the proposal Options(arguments, endorsingOrganizations, transientData)
+        const proposalOptions = new Map();;
+        //add contract arguments to proposal Options
+        proposalOptions.set("arguments", invokeSettings.contractArguments);
         // Add transient data if present
-        // - passed as key value pairing such as {"hello":"world"}
         if (invokeSettings.transientMap) {
             const transientData = {};
             const keys = Array.from(Object.keys(invokeSettings.transientMap));
             keys.forEach((key) => {
                 transientData[key] = Buffer.from(invokeSettings.transientMap[key]);
             });
-            transaction.setTransient(transientData);
+            proposalOptions.set("transientData", transientData)
         }
-
+        // Add endorsing organizations if present if present
         if (invokeSettings.targetPeers && isSubmit) {
             if (Array.isArray(invokeSettings.targetPeers) && invokeSettings.targetPeers.length > 0) {
                 const targetPeerObjects = [];
@@ -354,14 +360,14 @@ class V2FabricGateway extends ConnectorBase {
                     }
                 }
                 if (targetPeerObjects.length > 0) {
-                    transaction.setEndorsingPeers(targetPeerObjects);
+                    proposalOptions.set("endorsingOrganization", targetPeerObjects);
                 }
             } else {
                 logger.warn(`${invokeSettings.targetPeers} is not a populated array, no peers targeted`);
             }
         } else if (invokeSettings.targetOrganizations && isSubmit) {
             if (Array.isArray(invokeSettings.targetOrganizations) && invokeSettings.targetOrganizations.length > 0) {
-                transaction.setEndorsingOrganizations(...invokeSettings.targetOrganizations);
+                proposalOptions.set("endorsingOrganization", invokeSettings.targetOrganizations)
             } else {
                 logger.warn(`${invokeSettings.targetOrganizations} is not a populated array, no orgs targeted`);
             }
@@ -373,7 +379,11 @@ class V2FabricGateway extends ConnectorBase {
             if (isSubmit) {
                 invokeStatus.Set('request_type', 'transaction');
                 invokeStatus.Set('time_create', Date.now());
-                result = await transaction.submit(...invokeSettings.contractArguments);
+                if (proposalOptions.length === 0){
+                    result = await transaction.submitTransaction(invokeSettings.contractFunction, ...invokeSettings.contractArguments);
+                } else{
+                    result = await transaction.submit(invokeSettings.contractFunction, proposalOptions);
+                }
             } else {
 
                 if (invokeSettings.targetPeers || invokeSettings.targetOrganizations) {
@@ -382,7 +392,12 @@ class V2FabricGateway extends ConnectorBase {
 
                 invokeStatus.Set('request_type', 'query');
                 invokeStatus.Set('time_create', Date.now());
-                result = await transaction.evaluate(...invokeSettings.contractArguments);
+
+                if (proposalOptions.length === 0){
+                    result = await transaction.evaluateTransaction(invokeSettings.contractFunction, ...invokeSettings.contractArguments);
+                }else{
+                    result = await transaction.submit(invokeSettings.contractFunction, proposalOptions);
+                }
             }
 
             invokeStatus.SetResult(result);
