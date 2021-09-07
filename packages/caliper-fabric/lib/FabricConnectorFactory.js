@@ -36,11 +36,8 @@ const NEW_V2_WALLET_FACADE_FACTORY = './connector-versions/v2/WalletFacadeFactor
  */
 const _determineInstalledNodeSDKVersion = () => {
     let version;
-    if (CaliperUtils.moduleIsInstalled('fabric-network')) {
-        const packageVersion = require('fabric-network/package').version;
-        version = semver.coerce(packageVersion);
-    } else if (CaliperUtils.moduleIsInstalled('fabric-client')) {
-        const packageVersion = require('fabric-client/package').version;
+    if (CaliperUtils.moduleIsInstalled('fabric-gateway')) {
+        const packageVersion = require('fabric-gateway/package').version;
         version = semver.coerce(packageVersion);
     } else {
         const msg = 'Unable to detect required Fabric binding packages';
@@ -53,42 +50,9 @@ const _loadAppropriateConnectorClass = (installedNodeSDKVersion, useGateway, use
     let connectorPath;
     let walletFacadeFactoryPath;
 
-    if (semver.satisfies(installedNodeSDKVersion, '=1.x')) {
-        if (!useGateway) {
-            if (useLegacyVersion) {
-                connectorPath = LEGACY_V1_NODE_CONNECTOR;
-            } else {
-                connectorPath = NEW_V1_NODE_CONNECTOR;
-                walletFacadeFactoryPath = NEW_V1_WALLET_FACADE_FACTORY;
-            }
-        } else {
-            // gateway with default event handlers appears in SDK > 1.4.2
-            if (semver.satisfies(installedNodeSDKVersion, '>=1.4.2')) {
-                if (useLegacyVersion) {
-                    connectorPath = LEGACY_V1_GATEWAY_CONNECTOR;
-                } else {
-                    connectorPath = NEW_V1_GATEWAY_CONNECTOR;
-                    walletFacadeFactoryPath = NEW_V1_WALLET_FACADE_FACTORY;
-                }
-            } else {
-                throw new Error('Caliper currently only supports Fabric gateway based operation using Fabric-SDK 1.4.2 and higher. Please retry with a different SDK binding');
-            }
-        }
-    } else if (semver.satisfies(installedNodeSDKVersion, '=2.x')) {
-        if (!useGateway) {
-            throw new Error(`Caliper currently only supports gateway based operation using the ${installedNodeSDKVersion} Fabric-SDK. Please retry with the gateway flag`);
-        } else {
-            if (useLegacyVersion) {
-                connectorPath = LEGACY_V2_GATEWAY_CONNECTOR;
-            } else {
-                connectorPath = NEW_V2_GATEWAY_CONNECTOR;
-                walletFacadeFactoryPath = NEW_V2_WALLET_FACADE_FACTORY;
-            }
-        }
-    } else {
-        throw new Error(`Installed SDK version ${installedNodeSDKVersion} did not match any compatible Fabric connectors`);
-    }
-
+    connectorPath = NEW_V2_GATEWAY_CONNECTOR;
+    walletFacadeFactoryPath = NEW_V2_WALLET_FACADE_FACTORY;
+                
     const fabricConnectorClass = require(connectorPath);
     let walletFacadeFactoryClass;
     if (walletFacadeFactoryPath) {

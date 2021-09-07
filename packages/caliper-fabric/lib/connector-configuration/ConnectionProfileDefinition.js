@@ -123,11 +123,8 @@ class ConnectionProfileDefinition {
      * @returns {[string]} an array containing the list of all the peers
      */
     getPeers(){
-        peers = this.connectionProfile.peers
-        const peersInChannel = [];
-        for (const peer of Object.keys(peers)) {
-            peersInChannel.push(peer);
-        }
+        const peersInChannel = this.connectionProfile.peers
+        return Object.keys(peersInChannel);
     }
 
     /**
@@ -136,7 +133,8 @@ class ConnectionProfileDefinition {
      * @returns {string} tls certificate
      */
     getTlsCertForPeer(peer){
-        return this.connectionProfile.peers[peer].tlsCACerts.pem
+        const peers =  this.connectionProfile.peers;
+        return peers[peer].tlsCACerts.pem;
     }
 
     /**
@@ -145,7 +143,8 @@ class ConnectionProfileDefinition {
      * @returns {string} end point port for peer
      */
     getEndPointForPeer(peer){
-        return this.connectionProfile.peers[peer].url
+        const peers = this.connectionProfile.peers;
+        return peers[peer].url;
     }
 
     /**
@@ -154,7 +153,8 @@ class ConnectionProfileDefinition {
      * @returns {[*]} the list of grpc object properties
      */
     getGrpcOptionForPeer(peer){
-        return this.connectionProfile.peers[peer].grpcOption
+        const peers = this.connectionProfile.peers;
+        return peers[peer].grpcOptions;
     }
 
 

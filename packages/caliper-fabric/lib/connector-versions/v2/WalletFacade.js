@@ -16,7 +16,6 @@
 
 const IWalletFacade = require('../../identity-management/IWalletFacade');
 const ExportedIdentity = require('../../identity-management/ExportedIdentity');
-const {Wallets} = require('fabric-network');
 
 /**
  * a Facade for the V2 Wallet implementation
@@ -36,11 +35,7 @@ class WalletFacade extends IWalletFacade {
      * @param {string} [walletPath] an optional path to a file system wallet
      */
     async initialize(walletPath) {
-        if (!walletPath) {
-            this.wallet = await Wallets.newInMemoryWallet();
-        } else {
-            this.wallet = await Wallets.newFileSystemWallet(walletPath);
-        }
+        this.wallet = new Map();
     }
 
     /**
@@ -64,9 +59,8 @@ class WalletFacade extends IWalletFacade {
                 privateKey
             },
             mspId,
-            type: 'X.509',
         };
-        await this.wallet.put(identityName, identity);
+        await this.wallet.set(identityName, identity);
     }
 
     /**
@@ -91,7 +85,7 @@ class WalletFacade extends IWalletFacade {
      * @async
      */
     async getAllIdentityNames() {
-        return await this.wallet.list();
+        return Array.from(this.wallet.keys());
     }
 
     /**
