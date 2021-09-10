@@ -14,11 +14,9 @@
 
 'use strict';
 
-//const { DefaultEventHandlerStrategies, DefaultQueryHandlerStrategies, Gateway } = require('fabric-network');
-import { promises as fs } from 'fs';
-import * as grpc from '@grpc/grpc-js';
-import { connect, Identity, signers } from 'fabric-gateway';
-import { ClientRequest } from 'http';
+const { DefaultEventHandlerStrategies, DefaultQueryHandlerStrategies, Gateway } = require('fabric-network');
+const grpc = require ('@grpc/grpc-js');
+const { connect, signers } = require('fabric-gateway');
 const { ConnectorBase, CaliperUtils, TxStatus, Version, ConfigUtil } = require('@hyperledger/caliper-core');
 const FabricConnectorContext = require('../../FabricConnectorContext');
 
