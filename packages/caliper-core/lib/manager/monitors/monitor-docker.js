@@ -201,7 +201,7 @@ class MonitorDocker extends MonitorInterface {
                     }
                     if (this.containers[i].remote === null) {
                         // local
-                        this.stats[id].mem_usage.push(stat.memUsage);
+                        this.stats[id].mem_usage.push(stat.memUsage-stat.stats.total_cache);
                         this.stats[id].mem_percent.push(stat.memPercent);
                         let cpuDelta = stat.cpuStats.cpu_usage.total_usage - stat.precpuStats.cpu_usage.total_usage;
                         let sysDelta = stat.cpuStats.system_cpu_usage - stat.precpuStats.system_cpu_usage;
