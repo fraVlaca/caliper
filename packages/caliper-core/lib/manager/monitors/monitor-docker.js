@@ -16,6 +16,7 @@
 'use strict';
 
 const Util = require('../../common/utils/caliper-utils');
+const os = require('os');
 const Logger = Util.getLogger('monitor-docker');
 const MonitorInterface = require('./monitor-interface');
 const MonitorUtilities = require('./monitor-utilities');
@@ -190,7 +191,7 @@ class MonitorDocker extends MonitorInterface {
                 const results = await Promise.all(startPromises);
                 this.stats.time.push(Date.now() / 1000);
                 for (let i = 0; i < results.length; i++) {
-                    let stat = results[i][0];
+                    let stat = results[i];
                     let id = stat.id;
                     if (this.containers.length <= i) {
                         break;
@@ -201,13 +202,14 @@ class MonitorDocker extends MonitorInterface {
                     }
                     if (this.containers[i].remote === null) {
                         // local
-                        this.stats[id].mem_usage.push(stat.memUsage-stat.stats.total_cache);
-                        this.stats[id].mem_percent.push(stat.memPercent);
-                        let cpuDelta = stat.cpuStats.cpu_usage.total_usage - stat.precpuStats.cpu_usage.total_usage;
-                        let sysDelta = stat.cpuStats.system_cpu_usage - stat.precpuStats.system_cpu_usage;
+                        const actualMemUsage = stat.mem_usage-stat.memory_stats.stats.cache
+                        this.stats[id].mem_usage.push(actualMemUsage);
+			            this.stats[id].mem_percent.push(actualMemUsage / stat.mem_limit);
+                        let cpuDelta = stat.cpu_stats.cpu_usage.total_usage - stat.precpu_stats.cpu_usage.total_usage;
+                        let sysDelta = stat.cpu_stats.system_cpu_usage - stat.precpu_stats.system_cpu_usage;
                         if (cpuDelta > 0 && sysDelta > 0) {
-                            if (stat.cpuStats.cpu_usage.hasOwnProperty('percpu_usage') && stat.cpuStats.cpu_usage.percpu_usage !== null) {
-                                this.stats[id].cpu_percent.push(cpuDelta / sysDelta * this.coresInUse(stat.cpuStats) * 100.0);
+                            if (stat.cpu_stats.cpu_usage.hasOwnProperty('percpu_usage') && stat.cpu_stats.cpu_usage.percpu_usage !== null) {
+                                this.stats[id].cpu_percent.push(cpuDelta / sysDelta * this.coresInUse(stat.cpu_stats) * 100.0);
                             } else {
                                 this.stats[id].cpu_percent.push(cpuDelta / sysDelta * 100.0);
                             }
@@ -258,6 +260,10 @@ class MonitorDocker extends MonitorInterface {
                         //Logger.debug(diskR+'  W: '+diskW);
                         this.stats[id].blockIO_rx.push(diskR);
                         this.stats[id].blockIO_wx.push(diskW);
+                        var sum = this.stats[id].netIO_rx.reduce(function(a, b){
+                            return a + b;
+                        }, 0)
+                        Logger.debug(sum);
                     }
                 }
                 this.isReading = false;
@@ -359,8 +365,8 @@ class MonitorDocker extends MonitorInterface {
                     watchItemStat.set('Name', container.name);
                     watchItemStat.set('Memory(max)', mem_stat.max);
                     watchItemStat.set('Memory(avg)', mem_stat.avg);
-                    watchItemStat.set('CPU%(max)', cpu_stat.max.toFixed(2));
-                    watchItemStat.set('CPU%(avg)', cpu_stat.avg.toFixed(2));
+                    watchItemStat.set('CPU%(max)', cpu_stat.max.toFixed(2) / os.cpus().length);
+                    watchItemStat.set('CPU%(avg)', cpu_stat.avg.toFixed(2) / os.cpus().length);
                     watchItemStat.set('Traffic In', (net.in[net.in.length - 1] - net.in[0]));
                     watchItemStat.set('Traffic Out', (net.out[net.out.length - 1] - net.out[0]));
                     watchItemStat.set('Disc Write', (disc.write[disc.write.length - 1] - disc.write[0]));
