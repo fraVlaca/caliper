@@ -123,11 +123,8 @@ class ConnectionProfileDefinition {
      * @returns {[string]} an array containing the list of all the peers
      */
     getPeers(){
-        peers = this.connectionProfile.peers
-        const peersInChannel = [];
-        for (const peer of Object.keys(peers)) {
-            peersInChannel.push(peer);
-        }
+        const peersInChannel = this.connectionProfile.peers
+        return peersInChannel;
     }
 
     /**
@@ -135,8 +132,9 @@ class ConnectionProfileDefinition {
      * @param {*} peer the name of the channel
      * @returns {string} tls certificate
      */
-    getTlsCertForPeer(peer){
-        return this.connectionProfile.peers[peer].tlsCACerts.pem
+    async getTlsCertForPeer(peer){
+        const peers = await this.getPeers();
+        return peers[peer].tlsCACerts.pem;
     }
 
     /**
@@ -144,8 +142,9 @@ class ConnectionProfileDefinition {
      * @param {*} peer the name of the channel
      * @returns {string} end point port for peer
      */
-    getEndPointForPeer(peer){
-        return this.connectionProfile.peers[peer].url
+    async getEndPointForPeer(peer){
+        const peers = await this.getPeers();
+        return peers[peer].url;
     }
 
     /**
@@ -153,8 +152,9 @@ class ConnectionProfileDefinition {
      * @param {*} peer the name of the channel
      * @returns {[*]} the list of grpc object properties
      */
-    getGrpcOptionForPeer(peer){
-        return this.connectionProfile.peers[peer].grpcOption
+    async getGrpcOptionForPeer(peer){
+        const peers = await this.getPeers();
+        return peers[peer].grpcOptions;
     }
 
 
