@@ -195,8 +195,7 @@ class V2FabricGateway extends ConnectorBase {
         logger.debug('Entering _prepareGatewayAndContractMapsForEachIdentity');
         for (const organization of this.connectorConfiguration.getOrganizations()) {
             const connectionProfileDefinition = await this.connectorConfiguration.getConnectionProfileDefinitionForOrganization(organization);
-            const peerObjs = await connectionProfileDefinition.getPeers();
-            const peers = Object.keys(peerObjs);
+            const peers = await connectionProfileDefinition.getPeers();
             const aliasNames = await this.connectorConfiguration.getAliasNamesForOrganization(organization);
             const walletWithIdentities = this.connectorConfiguration.getWallet();
 
@@ -361,7 +360,6 @@ class V2FabricGateway extends ConnectorBase {
             }
         }*/
         let transaction;
-        transaction = await smartContract.newProposal(invokeSettings.contractFunction, proposalOptions);
         try {
             if (isSubmit) {
                 invokeStatus.Set('request_type', 'transaction');
@@ -383,11 +381,12 @@ class V2FabricGateway extends ConnectorBase {
                 if (invokeSettings.targetPeers || invokeSettings.targetOrganizations) {
                     logger.warn('targetPeers or targetOrganizations options are not valid for query requests');
                 }
+                transaction = await smartContract.newProposal(invokeSettings.contractFunction, proposalOptions);
 
                 invokeStatus.Set('request_type', 'query');
                 invokeStatus.Set('time_create', Date.now());
 
-                invokeStatus.SetResult(transaction.evaluate());
+                invokeStatus.SetResult(await transaction.evaluate());
             }
 
             invokeStatus.SetVerification(true);
