@@ -398,8 +398,6 @@ class V2FabricGateway extends ConnectorBase {
             invokeStatus.SetStatusFail();
             invokeStatus.SetVerification(true);
             invokeStatus.SetResult('');
-            invokeStatus.SetID(transaction.getTransactionId());
-
             return invokeStatus;
         }
 
