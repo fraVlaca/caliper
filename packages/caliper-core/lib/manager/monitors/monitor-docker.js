@@ -191,6 +191,8 @@ class MonitorDocker extends MonitorInterface {
                 this.stats.time.push(Date.now() / 1000);
                 for (let i = 0; i < results.length; i++) {
                     let stat = results[i][0];
+                    console.log(stat);
+                    console.log(results[i]);
                     let id = stat.id;
                     if (this.containers.length <= i) {
                         break;
