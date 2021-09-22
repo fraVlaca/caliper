@@ -1,3 +1,4 @@
+
 /*
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -190,8 +191,9 @@ class MonitorDocker extends MonitorInterface {
                 const results = await Promise.all(startPromises);
                 this.stats.time.push(Date.now() / 1000);
                 for (let i = 0; i < results.length; i++) {
-                    let stat = results[i];
+                    let stat = results[i][0];
                     let id = stat.id;
+		    console.log(stat);
                     if (this.containers.length <= i) {
                         break;
                     }
