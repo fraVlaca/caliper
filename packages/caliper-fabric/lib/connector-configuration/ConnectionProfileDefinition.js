@@ -124,7 +124,7 @@ class ConnectionProfileDefinition {
      */
     getPeers(){
         const peersInChannel = this.connectionProfile.peers
-        return peersInChannel;
+        return Object.keys(peersInChannel);
     }
 
     /**
@@ -132,8 +132,8 @@ class ConnectionProfileDefinition {
      * @param {*} peer the name of the channel
      * @returns {string} tls certificate
      */
-    async getTlsCertForPeer(peer){
-        const peers = await this.getPeers();
+    getTlsCertForPeer(peer){
+        const peers =  this.connectionProfile.peers;
         return peers[peer].tlsCACerts.pem;
     }
 
@@ -142,8 +142,8 @@ class ConnectionProfileDefinition {
      * @param {*} peer the name of the channel
      * @returns {string} end point port for peer
      */
-    async getEndPointForPeer(peer){
-        const peers = await this.getPeers();
+    getEndPointForPeer(peer){
+        const peers = this.connectionProfile.peers;
         return peers[peer].url;
     }
 
@@ -152,8 +152,8 @@ class ConnectionProfileDefinition {
      * @param {*} peer the name of the channel
      * @returns {[*]} the list of grpc object properties
      */
-    async getGrpcOptionForPeer(peer){
-        const peers = await this.getPeers();
+    getGrpcOptionForPeer(peer){
+        const peers = this.connectionProfile.peers;
         return peers[peer].grpcOptions;
     }
 
