@@ -190,7 +190,8 @@ class MonitorDocker extends MonitorInterface {
                 const results = await Promise.all(startPromises);
                 this.stats.time.push(Date.now() / 1000);
                 for (let i = 0; i < results.length; i++) {
-                    let stat = results[i][0];
+                    let stat = results[i];
+                    console.log(stat);
                     let id = stat.id;
                     if (this.containers.length <= i) {
                         break;
@@ -201,13 +202,13 @@ class MonitorDocker extends MonitorInterface {
                     }
                     if (this.containers[i].remote === null) {
                         // local
-                        this.stats[id].mem_usage.push(stat.memUsage-stat.memoryStats.stats.total_cache);
-			this.stats[id].mem_percent.push(stat.memPercent);
-                        let cpuDelta = stat.cpuStats.cpu_usage.total_usage - stat.precpuStats.cpu_usage.total_usage;
-                        let sysDelta = stat.cpuStats.system_cpu_usage - stat.precpuStats.system_cpu_usage;
+                        this.stats[id].mem_usage.push(stat.mem_usage-stat.memory_stats.stats.total_cache);
+			            this.stats[id].mem_percent.push(stat.mem_percent);
+                        let cpuDelta = stat.cpu_stats.cpu_usage.total_usage - stat.precpu_stats.cpu_usage.total_usage;
+                        let sysDelta = stat.cpu_stats.system_cpu_usage - stat.precpu_stats.system_cpu_usage;
                         if (cpuDelta > 0 && sysDelta > 0) {
-                            if (stat.cpuStats.cpu_usage.hasOwnProperty('percpu_usage') && stat.cpuStats.cpu_usage.percpu_usage !== null) {
-                                this.stats[id].cpu_percent.push(cpuDelta / sysDelta * this.coresInUse(stat.cpuStats) * 100.0);
+                            if (stat.cpu_stats.cpu_usage.hasOwnProperty('percpu_usage') && stat.cpu_stats.cpu_usage.percpu_usage !== null) {
+                                this.stats[id].cpu_percent.push(cpuDelta / sysDelta * this.coresInUse(stat.cpu_stats) * 100.0);
                             } else {
                                 this.stats[id].cpu_percent.push(cpuDelta / sysDelta * 100.0);
                             }
