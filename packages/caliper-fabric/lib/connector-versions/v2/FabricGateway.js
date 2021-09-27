@@ -365,18 +365,9 @@ class V2FabricGateway extends ConnectorBase {
                 invokeStatus.Set('request_type', 'transaction');
                 invokeStatus.Set('time_create', Date.now());
                 transaction = await smartContract.submitAsync(invokeSettings.contractFunction, proposalOptions);
-
-                const successful = await transaction.isSuccessful();
-
-                if (!successful) {
-                    const status = await transaction.getStatus();
-                    invokeStatus.SetStatusFail();
-                    invokeStatus.SetResult('');
-                    logger.error(`Transaction ${commit.getTransactionId()} failed to commit with status code: ${status}`);
-                } else {
-                    invokeStatus.SetStatusSuccess();
-                    invokeStatus.SetResult(transaction.getResult());
-                }
+                const status = await transaction.getStatus();
+                invokeStatus.SetStatusSuccess();
+                invokeStatus.SetResult(transaction.getResult());
             } else {
                 if (invokeSettings.targetPeers || invokeSettings.targetOrganizations) {
                     logger.warn('targetPeers or targetOrganizations options are not valid for query requests');
@@ -387,6 +378,7 @@ class V2FabricGateway extends ConnectorBase {
                 invokeStatus.Set('time_create', Date.now());
 
                 invokeStatus.SetResult(await transaction.evaluate());
+                invokeStatus.SetStatusSuccess();
             }
 
             invokeStatus.SetVerification(true);
@@ -398,8 +390,6 @@ class V2FabricGateway extends ConnectorBase {
             invokeStatus.SetStatusFail();
             invokeStatus.SetVerification(true);
             invokeStatus.SetResult('');
-            invokeStatus.SetID(transaction.getTransactionId());
-
             return invokeStatus;
         }
 
