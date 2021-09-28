@@ -272,8 +272,12 @@ class V2FabricGateway extends ConnectorBase {
             const peerEndpointUrl = await connectionProfileDefinition.getEndPointForPeer(peer);
             const peerEndpoint = peerEndpointUrl.toString().replace('grpcs://', '');
             const grpcOptions = await connectionProfileDefinition.getGrpcOptionForPeer(peer);
+            grpcOptions['grpc.ssl-target-name-override'] = 'peer0.org1.example.com';
+            grpcOptions['grpc.hostnameOverride'] = 'peer0.org1.example.com';
+	        grpcOptions['grpc.max_receive_message_length'] = -1;
+	        grpcOptions['grpc.max_send_message_length'] = -1;
             const GrpcClient = grpc.makeGenericClientConstructor({}, '');
-            client = new GrpcClient(peerEndpoint, tlsCredentials, grpcOptions);
+	        client = new GrpcClient(peerEndpoint, tlsCredentials, grpcOptions);
             this.clients.set(peer, client);
         }
         //create signer using the private key of the peer
@@ -365,18 +369,9 @@ class V2FabricGateway extends ConnectorBase {
                 invokeStatus.Set('request_type', 'transaction');
                 invokeStatus.Set('time_create', Date.now());
                 transaction = await smartContract.submitAsync(invokeSettings.contractFunction, proposalOptions);
-
-                const successful = await transaction.isSuccessful();
-
-                if (!successful) {
-                    const status = await transaction.getStatus();
-                    invokeStatus.SetStatusFail();
-                    invokeStatus.SetResult('');
-                    logger.error(`Transaction ${commit.getTransactionId()} failed to commit with status code: ${status}`);
-                } else {
-                    invokeStatus.SetStatusSuccess();
-                    invokeStatus.SetResult(transaction.getResult());
-                }
+                const status = await transaction.getStatus();
+                invokeStatus.SetStatusSuccess();
+                invokeStatus.SetResult(transaction.getResult());
             } else {
                 if (invokeSettings.targetPeers || invokeSettings.targetOrganizations) {
                     logger.warn('targetPeers or targetOrganizations options are not valid for query requests');
