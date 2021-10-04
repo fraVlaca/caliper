@@ -368,8 +368,8 @@ class MonitorDocker extends MonitorInterface {
                     watchItemStat.set('Memory(avg)', mem_stat.avg);
                     watchItemStat.set('CPU%(max)', cpu_stat.max.toFixed(2) / os.cpus().length);
                     watchItemStat.set('CPU%(avg)', cpu_stat.avg.toFixed(2) / os.cpus().length);
-                    watchItemStat.set('Traffic In', (net.in[net.in.length - 1] - net.in[0]));
-                    watchItemStat.set('Traffic Out', (net.out[net.out.length - 1] - net.out[0]));
+                    watchItemStat.set('Traffic In', (net.in[net.in.length - 1] - net.in[net.in.length - 2]));
+                    watchItemStat.set('Traffic Out', (net.out[net.out.length - 1] - net.in[net.in.length - 2]));
                     watchItemStat.set('Disc Write', (disc.write[disc.write.length - 1] - disc.write[0]));
                     watchItemStat.set('Disc Read', (disc.read[disc.read.length - 1] - disc.read[0]));
 
