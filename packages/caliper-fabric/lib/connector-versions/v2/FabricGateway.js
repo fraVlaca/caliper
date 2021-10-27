@@ -271,11 +271,12 @@ class V2FabricGateway extends ConnectorBase {
             const tlsCredentials = grpc.credentials.createSsl(Buffer.from(tlsRootCert));
             const peerEndpointUrl = await connectionProfileDefinition.getEndPointForPeer(peer);
             const peerEndpoint = peerEndpointUrl.toString().replace('grpcs://', '');
-            const grpcOptions = await connectionProfileDefinition.getGrpcOptionForPeer(peer);
+            const grpcOptions = {};//await connectionProfileDefinition.getGrpcOptionForPeer(peer);
             grpcOptions['grpc.ssl-target-name-override'] = 'peer0.org1.example.com';
             grpcOptions['grpc.hostnameOverride'] = 'peer0.org1.example.com';
 	        grpcOptions['grpc.max_receive_message_length'] = -1;
 	        grpcOptions['grpc.max_send_message_length'] = -1;
+            console.log(tlsCredentials,peerEndpoint,grpcOptions);
             const GrpcClient = grpc.makeGenericClientConstructor({}, '');
 	        client = new GrpcClient(peerEndpoint, tlsCredentials, grpcOptions);
             this.clients.set(peer, client);
