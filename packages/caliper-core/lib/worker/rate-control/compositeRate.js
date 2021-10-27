@@ -265,3 +265,4 @@ function createRateController(testMessage, stats, workerIndex) {
 }
 
 module.exports.createRateController = createRateController;
+
