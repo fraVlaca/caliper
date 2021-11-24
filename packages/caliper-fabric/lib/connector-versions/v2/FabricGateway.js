@@ -198,7 +198,7 @@ class V2FabricGateway extends ConnectorBase {
             const peers = await connectionProfileDefinition.getPeers();
             const aliasNames = await this.connectorConfiguration.getAliasNamesForOrganization(organization);
             const walletWithIdentities = this.connectorConfiguration.getWallet();
-
+            console.log(aliasNames);
             for (let i = 0; i < aliasNames.length; i++) {
                 const gateway = await this._createGatewayWithIdentity(organization, aliasNames[i], walletWithIdentities, peers[i % peers.length]);
                 this.gatewayInstanceByIdentity.set(aliasNames[i], gateway);
@@ -271,7 +271,8 @@ class V2FabricGateway extends ConnectorBase {
             const tlsCredentials = grpc.credentials.createSsl(Buffer.from(tlsRootCert));
             const peerEndpointUrl = await connectionProfileDefinition.getEndPointForPeer(peer);
             const peerEndpoint = peerEndpointUrl.toString().replace('grpcs://', '');
-            const grpcOptions = {};//await connectionProfileDefinition.getGrpcOptionForPeer(peer);
+            //const grpcOptions = {};
+            await connectionProfileDefinition.getGrpcOptionForPeer(peer);
             //grpcOptions['grpc.ssl_target_name_override'] = 'peer0.org1.example.com';
             //grpcOptions['grpc.hostnameOverride'] = 'peer0.org1.example.com';
 	        grpcOptions['grpc.max_receive_message_length'] = -1;
